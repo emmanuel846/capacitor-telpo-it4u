@@ -34,8 +34,8 @@ import static com.ftpos.library.smartpos.printer.AlignStyle.PRINT_STYLE_CENTER;
 import static com.ftpos.library.smartpos.printer.AlignStyle.PRINT_STYLE_LEFT;
 import static com.ftpos.library.smartpos.printer.AlignStyle.PRINT_STYLE_RIGHT;
 
-@CapacitorPlugin(name = "TelpoPrint")
-public class TelpoPrintPlugin extends Plugin {
+@CapacitorPlugin(name = "TpePrint")
+public class TpePrintPlugin extends Plugin {
     private boolean boundPos = false;
     private final int NOPAPER = 3;
     private boolean isSunyardServiceBound = false;
@@ -389,3 +389,4 @@ public class TelpoPrintPlugin extends Plugin {
         }
     }
 }
+

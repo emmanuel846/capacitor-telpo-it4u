@@ -1,4 +1,4 @@
-export interface TelpoPrintPlugin {
+export interface TpePrintPlugin {
   print(options: { receipt: ReceiptModel }): Promise<void>;
 }
 

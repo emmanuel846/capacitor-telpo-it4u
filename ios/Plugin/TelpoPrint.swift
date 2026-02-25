@@ -1,6 +1,6 @@
 import Foundation
 
-@objc public class TelpoPrint: NSObject {
+@objc public class TpePrint: NSObject {
     @objc public func echo(_ value: String) -> String {
         print(value)
         return value

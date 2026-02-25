@@ -1,10 +1,10 @@
 import { registerPlugin } from '@capacitor/core';
 
-import type { TelpoPrintPlugin } from './definitions';
+import type { TpePrintPlugin } from './definitions';
 
-const TelpoPrint = registerPlugin<TelpoPrintPlugin>('TelpoPrint', {
-  web: () => import('./web').then(m => new m.TelpoPrintWeb()),
+const TpePrint = registerPlugin<TpePrintPlugin>('TpePrint', {
+  web: () => import('./web').then(m => new m.TpePrintWeb()),
 });
 
 export * from './definitions';
-export { TelpoPrint };
+export { TpePrint };

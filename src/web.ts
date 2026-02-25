@@ -1,8 +1,8 @@
 import { WebPlugin } from '@capacitor/core';
 
-import type { ReceiptModel, TelpoPrintPlugin } from './definitions';
+import type { ReceiptModel, TpePrintPlugin } from './definitions';
 
-export class TelpoPrintWeb extends WebPlugin implements TelpoPrintPlugin {
+export class TpePrintWeb extends WebPlugin implements TpePrintPlugin {
   async print(options: { receipt: ReceiptModel }): Promise<void> {
     console.log('printing', options);
   }
