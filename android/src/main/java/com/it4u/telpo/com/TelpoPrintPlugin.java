@@ -7,6 +7,7 @@ import android.os.Build;
 import android.os.RemoteException;
 import android.util.Log;
 import android.widget.Toast;
+import android.graphics.Bitmap;
 
 import com.common.apiutil.CommonException;
 import com.getcapacitor.JSObject;
@@ -18,29 +19,43 @@ import com.common.apiutil.printer.UsbThermalPrinter;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
 import com.sunyard.api.printer.IPrinter;
 import com.sunyard.api.printer.OnPrintListener;
 import com.sunyard.api.printer.PrintConstant;
 import com.it4u.telpo.com.service.DeviceService;
 import com.it4u.telpo.com.service.DeviceServiceGet;
+import com.ftpos.library.smartpos.printer.OnPrinterCallback;
+import com.ftpos.library.smartpos.printer.PrintStatus;
+import com.ftpos.library.smartpos.printer.Printer;
+import com.ftpos.library.smartpos.servicemanager.ServiceManager;
+import static com.ftpos.library.smartpos.errcode.ErrCode.ERR_SUCCESS;
+import static com.ftpos.library.smartpos.printer.AlignStyle.PRINT_STYLE_CENTER;
+import static com.ftpos.library.smartpos.printer.AlignStyle.PRINT_STYLE_LEFT;
+import static com.ftpos.library.smartpos.printer.AlignStyle.PRINT_STYLE_RIGHT;
 
 @CapacitorPlugin(name = "TelpoPrint")
 public class TelpoPrintPlugin extends Plugin {
+    private boolean boundPos = false;
     private final int NOPAPER = 3;
     private boolean isSunyardServiceBound = false;
     private final int LOWBATTERY = 4;
     private final int OVERHEAT = 12;
-    private TelpoPrint implementation = new TelpoPrint();
     UsbThermalPrinter printer;
     @Override
     public void load() {
         printer = new UsbThermalPrinter(this.getActivity().getApplicationContext());
+        if(!boundPos){
+            ServiceManager.bindPosServer(this.getActivity().getApplicationContext());
+            Log.i("SM", "BindPOS");
+        }
         super.load();
     }
 
     @Override
     protected void handleOnStart() {
         super.handleOnStart();
+
         printer = new UsbThermalPrinter(this.getActivity().getApplicationContext());
     }
 
@@ -86,17 +101,23 @@ public class TelpoPrintPlugin extends Plugin {
     @PluginMethod
     public void print(PluginCall call) {
         JSObject data = call.getObject("receipt");
-        try {
-            if(isSunyard()){
-                printOnSunyard(new JSONObject(data.toString()),this.getContext());
-            }
-            else{
-                JSObject data2 = call.getObject("receipt");
-                printReceipt(data2);
-            }
+        try{
+            printOnSunyard(new JSONObject(data.toString()),this.getContext());
+        }catch(Exception e){
+            
+        }
+        
+        try{
+            JSObject data2 = call.getObject("receipt");
+            printReceipt(data2);
+        }catch(Exception e){
+            
+        }
+        try{
+            Printer printer = Printer.getInstance(this.getActivity().getApplicationContext());
+            printFeitianReceipt(printer, data);
+        }catch(Exception e){
 
-        } catch (JSONException e) {
-            throw new RuntimeException(e);
         }
         call.resolve();
     }
@@ -163,6 +184,110 @@ public class TelpoPrintPlugin extends Plugin {
     private enum ToastType {
         LONG,
         SHORT
+    }
+
+    public void logMsg(String msg) {
+        Log.i("Printer", msg);
+    }
+
+    void printFeitianReceipt(Printer printer, JSONObject data) {
+
+        try {
+            int ret;
+            ret = printer.open();
+            if(ret != ERR_SUCCESS){
+                logMsg("open failed"+ String.format(" errCode = 0x%x\n" , ret) );
+                return;
+            }
+
+            ret = printer.startCaching();
+            if(ret != ERR_SUCCESS){
+                logMsg("startCaching failed"+ String.format(" errCode = 0x%x\n" , ret) );
+                return;
+            }
+
+            ret = printer.setGray(3);
+            if(ret != ERR_SUCCESS){
+                logMsg("startCaching failed"+ String.format(" errCode = 0x%x\n" , ret) );
+                return;
+            }
+
+            PrintStatus printStatus = new PrintStatus();
+            ret = printer.getStatus(printStatus);
+            if(ret != ERR_SUCCESS){
+                logMsg("getStatus failed"+ String.format(" errCode = 0x%x\n" , ret) );
+                return;
+            }
+
+            logMsg("Temperature = "+ printStatus.getmTemperature() + "\n");
+            logMsg("Gray = "+ printStatus.getmGray() + "\n");
+            if(!printStatus.getmIsHavePaper()){
+                logMsg("Printer out of paper\n");
+                return;
+            }
+
+            String title = data.getString("title");
+            String footer = data.getString("footer");
+            JSONArray lines = data.getJSONArray("lines");
+            JSONObject header = data.getJSONObject("header");
+            String agencyName = header.getString("agencyName");
+            String agencyContact = header.getString("agencyContact");
+            String agencyAdress = header.getString("agencyAdress");
+
+            printer.setAlignStyle(PRINT_STYLE_CENTER);
+            printer.setSpace(0,30);
+            printer.printStr(agencyName+"\n");
+            printer.printStr("Tel: "+agencyContact+"\n");
+            printer.printStr("Adresse: "+agencyAdress+"\n");
+            printer.setSpace(0,15);
+            printer.printStr("***********************************");
+            printer.setAlignStyle(PRINT_STYLE_CENTER);
+            printer.printStr(title+"\n");
+            printer.printStr("***********************************\n");
+            for (int i=0; i < lines.length(); i++){
+                if(i==0){
+                    printer.setSpace(0, 15);
+                }
+                if(i == (lines.length() - 1)){
+                    printer.setSpace(0, 30);
+                }
+                JSONObject val = lines.getJSONObject(i);
+                String key = val.getString("title");
+                String value = val.getString("value");
+                printer.setAlignStyle(PRINT_STYLE_LEFT);
+                printer.printStr(key);
+                printer.setAlignStyle(PRINT_STYLE_RIGHT);
+                printer.printStr(value+"\n");
+            }
+
+            printer.setAlignStyle(PRINT_STYLE_CENTER);
+            printer.printStr(footer+"\n");
+
+            ret = printer.getUsedPaperLenManage();
+            if(ret < 0){
+                logMsg("getUsedPaperLenManage failed"+ String.format(" errCode = 0x%x\n" , ret) );
+            }
+            printer.print(new OnPrinterCallback() {
+                @Override
+                public void onSuccess() {
+                    logMsg("print success\n");
+                    printer.feed(32);
+                }
+
+                @Override
+                public void onError(int i) {
+                    logMsg("printBmp failed"+ String.format(" errCode = 0x%x\n", i) );
+                }
+            });
+
+        } catch (JSONException e){
+            e.printStackTrace();
+            logMsg("print failed"+ e.toString()+"\n");
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            logMsg("print failed"+ e.toString()+"\n");
+        }
     }
 
     void printSunYard(JSONObject data, Context context){
