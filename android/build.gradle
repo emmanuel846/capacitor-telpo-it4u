@@ -49,7 +49,7 @@ repositories {
 
 
 dependencies {
-    implementation fileTree(dir: 'libs', include: ["*.jar","*.aar"])
+    implementation fileTree(dir: 'libs', include: ["*.jar","*.aar"], exclude: ["core-3.1.0.jar"])
     implementation project(':capacitor-android')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation project(':capacitor-feitian-it4u')
