@@ -39,12 +39,15 @@ print(options: { receipt: ReceiptModel; }) => Promise<void>
 
 #### ReceiptModel
 
-| Prop         | Type                                                |
-| ------------ | --------------------------------------------------- |
-| **`title`**  | <code>string</code>                                 |
-| **`footer`** | <code>string</code>                                 |
-| **`lines`**  | <code>any</code>                                    |
-| **`header`** | <code><a href="#headermodel">HeaderModel</a></code> |
+| Prop                | Type                                                | Description                                                              |
+| ------------------- | --------------------------------------------------- | ------------------------------------------------------------------------ |
+| **`title`**         | <code>string</code>                                 |                                                                          |
+| **`footer`**        | <code>string</code>                                 |                                                                          |
+| **`lines`**         | <code>any</code>                                    |                                                                          |
+| **`header`**        | <code><a href="#headermodel">HeaderModel</a></code> |                                                                          |
+| **`qrData`**        | <code>string</code>                                 | Encoded beneficiary payload used by Feitian native QR printing.          |
+| **`qrImageBase64`** | <code>string</code>                                 | PNG image without the data URL prefix for Telpo/Sunyard bitmap printing. |
+| **`qrLabel`**       | <code>string</code>                                 |                                                                          |
 
 
 #### HeaderModel

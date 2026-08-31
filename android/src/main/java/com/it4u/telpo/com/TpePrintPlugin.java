@@ -160,6 +160,7 @@ public class TpePrintPlugin extends Plugin {
                 }
                 printer.setAlgin(UsbThermalPrinter.ALGIN_MIDDLE);
                 printer.addString("\n" + footer + "\n");
+                printTelpoQr(data);
                 printer.printString();
                 printer.walkPaper(20);
             } catch (JSONException e) {}
@@ -313,6 +314,7 @@ public class TpePrintPlugin extends Plugin {
 
             printer.setAlignStyle(PRINT_STYLE_CENTER);
             printer.printStr("\n" + footer + "\n");
+            printFeitianQr(printer, data);
 
             ret = printer.getUsedPaperLenManage();
             if (ret < 0) {
@@ -427,6 +429,7 @@ public class TpePrintPlugin extends Plugin {
             // 3. Footer
             printer.feedLine(2);
             printer.addText(textCenterBundle, footer + "\n");
+            printSunyardQr(printer, data, textCenterBundle);
 
             // 4. Ajouter des lignes vides à la fin
             printer.feedLine(10);
@@ -451,6 +454,96 @@ public class TpePrintPlugin extends Plugin {
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private void printTelpoQr(JSONObject data) {
+        String qrImageBase64 = data.optString("qrImageBase64", "");
+        if (qrImageBase64.isEmpty()) {
+            return;
+        }
+
+        Bitmap qrBitmap = ReceiptQrHelper.scaleForThermalPrinter(
+            ReceiptQrHelper.decodeBase64ToBitmap(qrImageBase64)
+        );
+        if (qrBitmap == null) {
+            return;
+        }
+
+        try {
+            String qrLabel = data.optString("qrLabel", "QR beneficiaire");
+            printer.setAlgin(UsbThermalPrinter.ALGIN_MIDDLE);
+            if (!qrLabel.isEmpty()) {
+                printer.addString("\n" + qrLabel + "\n");
+            }
+            printer.printLogo(qrBitmap, true);
+        } catch (CommonException error) {
+            error.printStackTrace();
+        }
+    }
+
+    private void printFeitianQr(Printer printer, JSONObject data) throws JSONException {
+        String qrData = data.optString("qrData", "");
+        String qrImageBase64 = data.optString("qrImageBase64", "");
+        String qrLabel = data.optString("qrLabel", "QR beneficiaire");
+
+        printer.setAlignStyle(PRINT_STYLE_CENTER);
+        if (!qrLabel.isEmpty() && (!qrData.isEmpty() || !qrImageBase64.isEmpty())) {
+            printer.printStr("\n" + qrLabel + "\n");
+        }
+
+        if (!qrData.isEmpty()) {
+            byte[] qrBytes = qrData.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            int ret = printer.printQRCode(qrBytes, qrBytes.length);
+            if (ret != ERR_SUCCESS) {
+                logMsg("printQRCode failed" + String.format(" errCode = 0x%x\n", ret));
+            }
+            return;
+        }
+
+        if (qrImageBase64.isEmpty()) {
+            return;
+        }
+
+        Bitmap qrBitmap = ReceiptQrHelper.scaleForThermalPrinter(
+            ReceiptQrHelper.decodeBase64ToBitmap(qrImageBase64)
+        );
+        if (qrBitmap == null) {
+            return;
+        }
+
+        int ret = printer.printBmp(qrBitmap);
+        if (ret != ERR_SUCCESS) {
+            logMsg("printBmp failed" + String.format(" errCode = 0x%x\n", ret));
+        }
+    }
+
+    private void printSunyardQr(
+        IPrinter printer,
+        JSONObject data,
+        android.os.Bundle textCenterBundle
+    ) throws RemoteException {
+        String qrImageBase64 = data.optString("qrImageBase64", "");
+        if (qrImageBase64.isEmpty()) {
+            return;
+        }
+
+        Bitmap qrBitmap = ReceiptQrHelper.scaleForThermalPrinter(
+            ReceiptQrHelper.decodeBase64ToBitmap(qrImageBase64)
+        );
+        if (qrBitmap == null) {
+            return;
+        }
+
+        String qrLabel = data.optString("qrLabel", "QR beneficiaire");
+        if (!qrLabel.isEmpty()) {
+            printer.feedLine(1);
+            printer.addText(textCenterBundle, qrLabel + "\n");
+        }
+
+        android.os.Bundle imageBundle = new android.os.Bundle();
+        imageBundle.putInt("offset", 72);
+        printer.feedLine(1);
+        printer.addImage(imageBundle, ReceiptQrHelper.bitmapToPngBytes(qrBitmap));
     }
 }
 
